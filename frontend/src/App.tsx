@@ -100,20 +100,32 @@ function App() {
     }
   }
 
-  const handleAddCard = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddCard = async (e?: React.FormEvent, force: boolean = false) => {
+    if (e) e.preventDefault()
     if (!selectedFile) return
     try {
-      await fetch(`${API_BASE}/cards/${selectedFile}/add`, {
+      const response = await fetch(`${API_BASE}/cards/${selectedFile}/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCard)
+        body: JSON.stringify({ ...newCard, force })
       })
+      
+      if (response.status === 409) {
+        const errorData = await response.json()
+        if (window.confirm(`${errorData.detail}. Do you still want to add it?`)) {
+          handleAddCard(undefined, true)
+        }
+        return
+      }
+
+      if (!response.ok) throw new Error('Add failed')
+      
       setShowAddForm(false)
       setNewCard({ headword_sc: '', headword_tc: '', pinyin: '', defn: '' })
       fetchCards(selectedFile)
     } catch (error) {
       console.error('Error adding card:', error)
+      alert('Failed to add card.')
     }
   }
 

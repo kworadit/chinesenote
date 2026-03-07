@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import os
 import glob
@@ -31,6 +32,7 @@ class NewCard(BaseModel):
     headword_tc: str
     pinyin: str
     defn: str
+    force: Optional[bool] = False
 
 def get_xml_files():
     files = glob.glob("chinese*.xml")
@@ -94,6 +96,23 @@ def add_card(filename: str, new_card: NewCard):
     if not os.path.exists(filename):
         raise HTTPException(status_code=404, detail="File not found")
     
+    if not new_card.force:
+        for f in get_xml_files():
+            try:
+                p = etree.XMLParser(remove_blank_text=True)
+                t = etree.parse(f, p)
+                r = t.getroot()
+                for c_el in r.xpath("//card"):
+                    e_el = c_el.find("entry")
+                    hw = e_el.find("headword[@charset='sc']")
+                    if hw is not None and hw.text == new_card.headword_sc:
+                        return JSONResponse(
+                            status_code=409,
+                            content={"detail": f"Duplicate word found in {f[7:15]}"}
+                        )
+            except:
+                continue
+
     parser = etree.XMLParser(remove_blank_text=True)
     tree = etree.parse(filename, parser)
     root = tree.getroot()
