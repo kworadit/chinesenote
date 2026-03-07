@@ -1,0 +1,16 @@
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Dependencies
+node_modules/
+.npm/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
